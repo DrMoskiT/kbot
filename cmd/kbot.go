@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	telebot "gogkg.in/telebot.v3"
+	telebot "gopkg.in/telebot.v3"
 )
 
 var (
 	//Teletoken bot
 	TeleToken = os.Getenv("TELE_TOKEN")
 )
+
 // kbotCmd represents the kbot command
 var kbotCmd = &cobra.Command{
 	Use:   "kbot",
@@ -29,26 +30,24 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("kbot %s started", appVersion)
 		kbot, err := telebot.NewBot(telebot.Settings{
-			URL:	"",
-			Token:	TeleToken,
+			URL:    "",
+			Token:  TeleToken,
 			Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
 		})
 
-
-		if err !=nil {
+		if err != nil {
 			log.Fatalf("Please check TELE_TOKEN env variable. %s", err)
 			return
 		}
 
 		kbot.Handle(telebot.OnText, func(m telebot.Context) error {
-			log.Print(m.Message(),Payload, m.Text())
+			log.Print(m.Message(), Payload, m.Text())
 			return err
 		})
-		
-		kbot.Start()
-		
-	},
 
+		kbot.Start()
+
+	},
 }
 
 func init() {
