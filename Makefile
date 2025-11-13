@@ -9,7 +9,7 @@ test:
 	go test -v
 
 build: format
-	CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${shell dpkg --print-architecture } go build -v -o kbot -ldflags "-X="github.com/DrMoskiT/kbot/cmd.appVersion=${VERSION}
+	CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${shell dpkg --print-architecture } go build -v -o kbot -ldflags "-X 'github.com/drmoskit/kbot/cmd.appVersion=${VERSION}'"
 
 clean:
 	rm -rf kbot
