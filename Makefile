@@ -68,3 +68,5 @@ test-image:
 
 clean:
 	rm -rf $(BUILD_DIR) kbot
+	- docker rmi $(IMAGE_TAG) || true
+	- docker rmi $(TEST_IMAGE_TAG) || true
