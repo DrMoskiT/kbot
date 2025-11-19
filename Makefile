@@ -44,8 +44,11 @@ windows:
 	mv kbot $(BUILD_DIR)/$(APP)-windows-amd64
 
 image:
-	docker build . -t ${REGISTRY}/${APP}:${VERSION}-${TARGETOS}-${TARGETARCH}
-
+	docker build \
+	  --build-arg TARGETOS=$(TARGETOS) \
+	  --build-arg TARGETARCH=$(TARGETARCH) \
+	  -t $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH) .
+	  
 push:
 	docker push ${REGISTRY}/${APP}:${VERSION}-${TARGETARCH}
 
