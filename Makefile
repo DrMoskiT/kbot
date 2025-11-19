@@ -1,8 +1,9 @@
 APP=$(shell basename $(shell git remote get-url origin))
 REGISTRY=drmoskit
 VERSION=$(shell git describe --tags --abbrev=0)-$(shell git rev-parse --short HEAD)
-TARGETOS=linux
-TARGETARCH=arm64
+TARGETOS   ?= linux
+TARGETARCH ?= amd64
+PLATFORM   := $(TARGETOS)/$(TARGETARCH)
 BUILD_DIR := build
 format:
 	gofmt -s -w ./
@@ -44,13 +45,26 @@ windows:
 	mv kbot $(BUILD_DIR)/$(APP)-windows-amd64
 
 image:
-	docker build \
+	docker buildx build \
+	  --platform=$(PLATFORM) \
 	  --build-arg TARGETOS=$(TARGETOS) \
 	  --build-arg TARGETARCH=$(TARGETARCH) \
-	  -t $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH) .
-	  
+	  --build-arg VERSION=$(VERSION) \
+	  -t $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH) \
+	  --load .
+
 push:
-	docker push ${REGISTRY}/${APP}:${VERSION}-${TARGETARCH}
+	docker push $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH)
+
+test-image:
+	docker buildx build \
+	  --platform=$(PLATFORM) \
+	  --build-arg TARGETOS=$(TARGETOS) \
+	  --build-arg TARGETARCH=$(TARGETARCH) \
+	  --build-arg VERSION=$(VERSION) \
+	  -f Dockerfile.test \
+	  -t $(REGISTRY)/$(APP):$(VERSION)-test-$(TARGETOS)-$(TARGETARCH) \
+	  --load .
 
 clean:
 	rm -rf $(BUILD_DIR) kbot
