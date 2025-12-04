@@ -1,11 +1,21 @@
-APP=$(shell basename $(shell git remote get-url origin))
-REGISTRY=ghcr.io/drmoskit
+# ===== Образ для GHCR =====
+IMAGE_REGISTRY ?= ghcr.io
+IMAGE_OWNER    ?= drmoskit
+IMAGE_NAME     ?= kbot
 
-VERSION=$(shell git describe --tags --abbrev=0)-$(shell git rev-parse --short HEAD)
-TARGETOS   ?= linux
-TARGETARCH ?= amd64
-PLATFORM   := $(TARGETOS)/$(TARGETARCH)
-BUILD_DIR := build
+APP            := $(IMAGE_NAME)
+
+VERSION        := $(shell git describe --tags --abbrev=0)-$(shell git rev-parse --short HEAD)
+TARGETOS       ?= linux
+TARGETARCH     ?= amd64
+PLATFORM       := $(TARGETOS)/$(TARGETARCH)
+BUILD_DIR      := build
+
+# Повний тег образу
+IMAGE := $(IMAGE_REGISTRY)/$(IMAGE_OWNER)/$(IMAGE_NAME):$(VERSION)-$(TARGETOS)-$(TARGETARCH)
+TEST_IMAGE := $(IMAGE_REGISTRY)/$(IMAGE_OWNER)/$(IMAGE_NAME):$(VERSION)-test-$(
+TARGETOS)-$(TARGETARCH)
+
 format:
 	gofmt -s -w ./
 
@@ -14,6 +24,7 @@ lint:
 
 test:
 	go test -v
+
 get:
 	go get
 
@@ -42,7 +53,7 @@ macos-arm:
 
 windows:
 	$(MAKE) build TARGETOS=windows TARGETARCH=amd64
-	mkdir -p $(BUILD_DIR)
+	mkdir -п $(BUILD_DIR)
 	mv kbot $(BUILD_DIR)/$(APP)-windows-amd64
 
 image:
@@ -51,11 +62,11 @@ image:
 	  --build-arg TARGETOS=$(TARGETOS) \
 	  --build-arg TARGETARCH=$(TARGETARCH) \
 	  --build-arg VERSION=$(VERSION) \
-	  -t $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH) \
+	  -t $(IMAGE) \
 	  --load .
 
 push:
-	docker push $(REGISTRY)/$(APP):$(VERSION)-$(TARGETOS)-$(TARGETARCH)
+	docker push $(IMAGE)
 
 test-image:
 	docker buildx build \
@@ -64,10 +75,10 @@ test-image:
 	  --build-arg TARGETARCH=$(TARGETARCH) \
 	  --build-arg VERSION=$(VERSION) \
 	  -f Dockerfile.test \
-	  -t $(REGISTRY)/$(APP):$(VERSION)-test-$(TARGETOS)-$(TARGETARCH) \
+	  -t $(TEST_IMAGE) \
 	  --load .
 
 clean:
 	rm -rf $(BUILD_DIR) kbot
-	- docker rmi $(IMAGE_TAG) || true
-	- docker rmi $(TEST_IMAGE_TAG) || true
+	- docker rmi $(IMAGE) || true
+	- docker rmi $(TEST_IMAGE) || true

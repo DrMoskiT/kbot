@@ -30,23 +30,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push image
-        env:
-          REGISTRY: ghcr.io
-          IMAGE_OWNER: drmoskit
-          APP: kbot
-        run: |
-          VERSION="$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-          make image push \
-            REGISTRY=$REGISTRY \
-            IMAGE_OWNER=$IMAGE_OWNER \
-            APP=$APP \
-            VERSION=$VERSION \
-            TARGETOS=linux \
-            TARGETARCH=amd64
-
+       - name: Build & Push image
+         run: |
+            make image push TARGETOS=linux TARGETARCH=amd64
   cd:
     name: CD
     needs: ci
