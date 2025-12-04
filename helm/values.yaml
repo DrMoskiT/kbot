@@ -8,7 +8,7 @@ replicaCount: 1
 image:
   registry: "ghcr.io"
   repository: "drmoskit/kbot"
-  tag: ""             # CI оновить
+  tag: "v.1.0.7-bc1f9f1" # CI оновить
   os: "linux"
   arch: "amd64"
   pullPolicy: IfNotPresent
