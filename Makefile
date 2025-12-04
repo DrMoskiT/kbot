@@ -83,4 +83,3 @@ clean:
 	- docker rmi $(IMAGE) || true
 	- docker rmi $(TEST_IMAGE) || true
 
-	
