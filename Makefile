@@ -82,3 +82,5 @@ clean:
 	rm -rf $(BUILD_DIR) kbot
 	- docker rmi $(IMAGE) || true
 	- docker rmi $(TEST_IMAGE) || true
+
+	
