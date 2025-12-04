@@ -1,55 +1,101 @@
 name: KBOT-CICD
 
-on: push
+on:
+  push:
+    branches:
+      - develop
+
 permissions:
   contents: write
-  
+  packages: write
+
 jobs:
-   ci:
-     name: CI
-     runs-on: ubuntu-latest
-    
-     steps:
-        - name: Checkout
-          uses: actions/checkout@v3
-          with:
-            fetch-depth: 0
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
 
-        - name: Run test
-          run: make test
-        - name: Docker Hub login
-          uses: docker/login-action@v3
-          with:
-             username: ${{ secrets.DOCKER_USERNAME }}
-             password: ${{ secrets.DOCKER_TOKEN }}
-        - name: Build&Push
-          env:
-            APP: "kbot"
-            REGISTRY: ${{ secrets.DOCKER_USERNAME }}
-          run: make image push
-        
-   cd:
-     name: CD
-     needs: ci
-     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-     steps:
+      - name: Run tests
+        run: make test
 
-     - uses: actions/checkout@v3
-       with:
-         fetch-depth: 0
-     - run: echo "VERSION=$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-     - uses: mikefarah/yq@master
-       with:
-         cmd: yq -i '.image.tag = strenv(version)' helm/values.yaml
+      - name: Build & Push image
+        env:
+          REGISTRY: ghcr.io
+          IMAGE_OWNER: drmoskit
+          APP: kbot
+        run: |
+          VERSION="$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-     - run: |
-            git config user.name github-actions
-            git config user.email github-action@github.com
-            git commit -am "update version $VERSION"
-            git push
+          make image push \
+            REGISTRY=$REGISTRY \
+            IMAGE_OWNER=$IMAGE_OWNER \
+            APP=$APP \
+            VERSION=$VERSION \
+            TARGETOS=linux \
+            TARGETARCH=amd64
 
+  cd:
+    name: CD
+    needs: ci
+    runs-on: ubuntu-latest
 
-        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Compute version
+        run: |
+          VERSION="$(git describe --tags --abbrev=0)-$(git rev-parse --short HEAD)"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update helm/values.yaml
+        uses: mikefarah/yq@v4
+        with:
+          cmd: |
+            yq -i '
+              .image.registry = "ghcr.io" |
+              .image.repository = "drmoskit/kbot" |
+              .image.tag = strenv(VERSION) |
+              .image.os = "linux" |
+              .image.arch = "amd64"
+            ' helm/values.yaml
+
+      - name: Commit updated values.yaml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add helm/values.yaml
+          git diff --cached --quiet && exit 0
+
+          git commit -m "chore: update image to ${VERSION} [skip ci]"
+          git push origin HEAD:${GITHUB_REF#refs/heads/}
+
+      - name: Deploy via ArgoCD
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+          ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+
+          argocd login "$ARGOCD_SERVER" --username "$ARGOCD_USERNAME" --password "$ARGOCD_PASSWORD" --insecure
+          argocd app sync kbot
+          argocd app wait kbot --sync --health
