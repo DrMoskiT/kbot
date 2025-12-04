@@ -27,9 +27,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // якщо хочеш — можеш використати params.GIT_REPO/BRANCH,
-                // для простоти жорстко вказуємо твій репозиторій
-                git branch: 'develop', url: 'https://github.com/DrMoskiT/kbot.git'
+                git branch: 'main', url: 'https://github.com/DrMoskiT/kbot.git'
             }
         }
 
@@ -42,11 +40,54 @@ pipeline {
             }
         }
 
+        stage('Lint') {
+            when {
+                expression { !params.SKIP_LINT }
+            }
+            steps {
+                echo "🔍 Running linter..."
+                // якщо нема make lint — можна замінити на go vet ./...
+                sh '''
+                    if make help | grep -q "lint"; then
+                      make lint
+                    else
+                      echo "No make lint, running go vet ./..."
+                      go vet ./...
+                    fi
+                '''
+            }
+        }
+
+        stage('Tests') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                echo "🧪 Running tests..."
+                sh '''
+                    if make help | grep -q "test"; then
+                      make test
+                    else
+                      echo "No make test, running go test ./..."
+                      go test ./...
+                    fi
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
-                echo "Here you will run make/go build with OS/ARCH"
-                // приклад:
-                // sh "GOOS=${params.OS} GOARCH=${params.ARCH} go build -o kbot-${params.OS}-${params.ARCH} ."
+                echo "🔨 Building for ${params.OS}/${params.ARCH}"
+
+                sh """
+                    mkdir -p build
+                    GOOS=${params.OS} \
+                    GOARCH=${params.ARCH} \
+                    CGO_ENABLED=0 \
+                    go build -o build/kbot-${params.OS}-${params.ARCH} .
+                """
+
+                echo "Binary created: build/kbot-${params.OS}-${params.ARCH}"
             }
         }
     }
@@ -54,6 +95,7 @@ pipeline {
     post {
         success {
             echo "✅ Build finished successfully"
+            archiveArtifacts artifacts: 'build/**', allowEmptyArchive: true
         }
         failure {
             echo "❌ Build failed"
