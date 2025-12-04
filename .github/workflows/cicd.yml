@@ -32,7 +32,8 @@ jobs:
 
       - name: Build & Push image
         run: |
-            make image push TARGETOS=linux TARGETARCH=amd64
+          make image push TARGETOS=linux TARGETARCH=amd64
+
   cd:
     name: CD
     needs: ci
@@ -72,16 +73,6 @@ jobs:
           git commit -m "chore: update image to ${VERSION} [skip ci]"
           git push origin HEAD:${GITHUB_REF#refs/heads/}
 
-      - name: Deploy via ArgoCD
-        env:
-          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
-          ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
-          ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+      - name: Info
         run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          chmod +x argocd
-          sudo mv argocd /usr/local/bin/argocd
-
-          argocd login "$ARGOCD_SERVER" --username "$ARGOCD_USERNAME" --password "$ARGOCD_PASSWORD" --insecure
-          argocd app sync kbot
-          argocd app wait kbot --sync --health
+          echo "ArgoCD відслідковує репозиторій та з auto-sync розгортає нову версію."
