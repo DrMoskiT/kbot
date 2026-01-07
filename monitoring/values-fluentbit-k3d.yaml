@@ -1,6 +1,6 @@
 kind: DaemonSet
 
-# Перевизначаємо дефолтні томи DaemonSet і ВИКИДАЄМО etcmachineid
+
 daemonSetVolumes:
   - name: varlog
     hostPath:
@@ -16,7 +16,6 @@ daemonSetVolumeMounts:
     mountPath: /var/lib/docker/containers
     readOnly: true
 
-# Відправка в Loki
 config:
   outputs: |
     [OUTPUT]
