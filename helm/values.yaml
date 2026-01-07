@@ -17,3 +17,26 @@ secret:
   key: "token"
 securityContext:
   privileged: true
+httpRoute:
+  enabled: false
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+serviceAccount:
+  create: true
+  name: "kbot-helm"
+service:
+  type: ClusterIP
+  port: 80
+teleTokenSecret:
+  name: "kbot"
+  key: "token"
+  env: "TELE_TOKEN"
+ingress:
+  enabled: false
+image:
+  repository: ghcr.io/drmoskit/kbot
+  tag: "v1.0.7"
+  arch: amd64
